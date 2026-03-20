@@ -131,7 +131,7 @@ export default async function ClientPortalPage({ params }: { params: { id: strin
               <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold text-amber-900 mb-1">Your attention is needed</p>
-                <p className="text-sm text-amber-800 leading-relaxed">{c.blocker_note}</p>
+                <p className="text-sm text-amber-800 leading-relaxed">{c.blocker_note ?? ""}</p>
               </div>
             </div>
           </div>
