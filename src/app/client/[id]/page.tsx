@@ -108,8 +108,9 @@ function Label({ children }: { children: React.ReactNode }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function ClientPortalPage({ params }: { params: { id: string } }) {
-  const c = await getCaseById(params.id);
-  if (!c) notFound();
+  const caseData = await getCaseById(params.id);
+  if (!caseData) notFound();
+  const c = caseData!;
 
   const currentIndex  = STAGE_ORDER.indexOf(c.current_stage);
   const progress      = Math.round(((currentIndex + 1) / STAGE_ORDER.length) * 100);
