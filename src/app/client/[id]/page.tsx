@@ -161,29 +161,92 @@ export default async function ClientPortalPage({ params }: { params: { id: strin
 
       // ── Stage progress ──────────────────────────────────────────────────────
 
-      case "stage":
+      case "stage": {
+        const shortLabels: Record<string, string> = {
+          intake:                 "Intake",
+          insurance_verification: "Insurance",
+          financing:              "Financing",
+          clinic_coordination:    "Clinic",
+          medication_protocol:    "Meds",
+          active_cycle:           "Cycle",
+          retrieval:              "Retrieval",
+          transfer:               "Transfer",
+          post_procedure:         "Follow-up",
+          completed:              "Done",
+        };
         return (
           <Card key="stage">
-            <div className="flex items-start justify-between mb-1">
-              <Label>Where You Are</Label>
-              <p className="text-[11px] text-stone-400 mt-0 -mt-0.5">
-                Step {currentIndex + 1} of {STAGE_ORDER.length}
-              </p>
+            <Label>Your Journey</Label>
+
+            {/* Visual milestone track */}
+            <div className="flex items-start">
+              {STAGE_ORDER.flatMap((s, i) => {
+                const isCompleted = i < currentIndex;
+                const isCurrent   = i === currentIndex;
+                const isLast      = i === STAGE_ORDER.length - 1;
+                const elements = [
+                  <div key={`node-${s}`} className="flex flex-col items-center gap-1.5" style={{ flexShrink: 0 }}>
+                    {/* Node */}
+                    <div className={`flex items-center justify-center rounded-full transition-all ${
+                      isCurrent
+                        ? "h-7 w-7 bg-primary shadow-sm ring-[3px] ring-primary/20"
+                        : isCompleted
+                        ? "h-5 w-5 bg-emerald-500"
+                        : "h-5 w-5 bg-white border-2 border-stone-200"
+                    }`}>
+                      {isCompleted && (
+                        <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
+                          <path d="M2 6l3 3 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                      {isCurrent && (
+                        <span className="text-[9px] font-bold text-white leading-none">{i + 1}</span>
+                      )}
+                      {!isCompleted && !isCurrent && (
+                        <span className="text-[8px] font-medium text-stone-300 leading-none">{i + 1}</span>
+                      )}
+                    </div>
+                    {/* Short label */}
+                    <span
+                      className={`text-[9px] leading-tight text-center ${
+                        isCurrent   ? "font-semibold text-primary" :
+                        isCompleted ? "text-emerald-500" :
+                                      "text-stone-300"
+                      }`}
+                      style={{ maxWidth: 36, wordBreak: "break-word" }}
+                    >
+                      {shortLabels[s] ?? s}
+                    </span>
+                  </div>,
+                ];
+                if (!isLast) {
+                  elements.push(
+                    <div key={`line-${s}`} className={`flex-1 h-0.5 mt-[13px] self-start ${
+                      i < currentIndex ? "bg-emerald-400" : "bg-stone-100"
+                    }`} />
+                  );
+                }
+                return elements;
+              })}
             </div>
-            <p className="text-xl font-semibold text-stone-900 mb-1">
-              {STAGE_LABELS[c.current_stage]}
-            </p>
-            <p className="text-sm text-stone-500 mb-5 leading-relaxed">
-              {STAGE_DESCRIPTIONS[c.current_stage]}
-            </p>
-            <div className="h-1 rounded-full bg-stone-100 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-primary"
-                style={{ width: `${progress}%` }}
-              />
+
+            {/* Current stage detail */}
+            <div className="mt-6 pt-5 border-t border-stone-100">
+              <div className="flex items-baseline justify-between mb-1">
+                <p className="text-lg font-semibold text-stone-900">
+                  {STAGE_LABELS[c.current_stage]}
+                </p>
+                <p className="text-[11px] text-stone-400 ml-3 shrink-0">
+                  Step {currentIndex + 1} of {STAGE_ORDER.length}
+                </p>
+              </div>
+              <p className="text-sm text-stone-500 leading-relaxed">
+                {STAGE_DESCRIPTIONS[c.current_stage]}
+              </p>
             </div>
           </Card>
         );
+      }
 
       // ── Next actions ────────────────────────────────────────────────────────
 
@@ -225,23 +288,23 @@ export default async function ClientPortalPage({ params }: { params: { id: strin
         return (
           <Card key="timeline">
             <Label>What Comes Next</Label>
-            <div>
+            <div className="space-y-0">
               {upcomingStages.map((stage, i) => {
                 const isLast = i === upcomingStages.length - 1;
                 return (
-                  <div key={stage} className="flex gap-4">
+                  <div key={stage} className="flex gap-3.5">
                     {/* Connector column */}
-                    <div className="flex flex-col items-center">
-                      <div className="h-6 w-6 rounded-full border-2 border-stone-200 bg-white flex items-center justify-center shrink-0">
-                        <span className="text-[10px] font-bold text-stone-400">
+                    <div className="flex flex-col items-center shrink-0">
+                      <div className="h-6 w-6 rounded-full border-2 border-stone-200 bg-stone-50 flex items-center justify-center">
+                        <span className="text-[9px] font-semibold text-stone-400">
                           {currentIndex + i + 2}
                         </span>
                       </div>
-                      {!isLast && <div className="w-px flex-1 bg-stone-100 my-1 min-h-[16px]" />}
+                      {!isLast && <div className="w-px flex-1 bg-stone-100 my-1 min-h-[20px]" />}
                     </div>
                     {/* Text */}
-                    <div className={isLast ? "pt-0.5" : "pt-0.5 pb-4"}>
-                      <p className="text-sm font-medium text-stone-700">{STAGE_LABELS[stage]}</p>
+                    <div className={`${isLast ? "pt-0.5" : "pt-0.5 pb-5"} flex-1 min-w-0`}>
+                      <p className="text-sm font-medium text-stone-600">{STAGE_LABELS[stage]}</p>
                       <p className="text-xs text-stone-400 mt-0.5 leading-relaxed">
                         {STAGE_DESCRIPTIONS[stage]}
                       </p>
