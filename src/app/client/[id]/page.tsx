@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCaseById } from "@/actions/cases";
 import { STAGE_LABELS, JOURNEY_TYPE_LABELS, STAGE_ORDER, formatDate } from "@/lib/utils";
-import { Heart, FileText, AlertTriangle, Clock, ChevronRight } from "lucide-react";
+import { Heart, FileText, AlertTriangle, Clock, ChevronRight, Check } from "lucide-react";
 import type { CaseDetail, CaseVendor } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -162,88 +162,109 @@ export default async function ClientPortalPage({ params }: { params: { id: strin
       // ── Stage progress ──────────────────────────────────────────────────────
 
       case "stage": {
-        const shortLabels: Record<string, string> = {
-          intake:                 "Intake",
-          insurance_verification: "Insurance",
-          financing:              "Financing",
-          clinic_coordination:    "Clinic",
-          medication_protocol:    "Meds",
-          active_cycle:           "Cycle",
-          retrieval:              "Retrieval",
-          transfer:               "Transfer",
-          post_procedure:         "Follow-up",
-          completed:              "Done",
-        };
+        // Show a window: up to 2 completed before + current + up to 3 upcoming
+        const windowStart   = Math.max(0, currentIndex - 2);
+        const windowEnd     = Math.min(STAGE_ORDER.length - 1, currentIndex + 3);
+        const visibleStages = STAGE_ORDER.slice(windowStart, windowEnd + 1);
+        const hiddenBefore  = windowStart;
+        const hiddenAfter   = STAGE_ORDER.length - 1 - windowEnd;
+
         return (
           <Card key="stage">
-            <Label>Your Journey</Label>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <Label>Your Journey</Label>
+              <span className="text-xs font-medium text-stone-500 -mt-4">{progress}% complete</span>
+            </div>
 
-            {/* Visual milestone track */}
-            <div className="flex items-start">
-              {STAGE_ORDER.flatMap((s, i) => {
+            {/* Progress bar */}
+            <div className="h-2 rounded-full bg-stone-100 overflow-hidden mb-7">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
+            {/* Collapsed completed stages above window */}
+            {hiddenBefore > 0 && (
+              <div className="flex items-center gap-2 mb-4 ml-1">
+                <div className="h-px flex-1 bg-emerald-200" />
+                <span className="text-xs text-emerald-600 font-medium shrink-0">
+                  {hiddenBefore} stage{hiddenBefore > 1 ? "s" : ""} completed
+                </span>
+                <div className="h-px flex-1 bg-emerald-200" />
+              </div>
+            )}
+
+            {/* Vertical stepper */}
+            <div>
+              {visibleStages.map((s, vi) => {
+                const i           = windowStart + vi;
                 const isCompleted = i < currentIndex;
                 const isCurrent   = i === currentIndex;
-                const isLast      = i === STAGE_ORDER.length - 1;
-                const elements = [
-                  <div key={`node-${s}`} className="flex flex-col items-center gap-1.5" style={{ flexShrink: 0 }}>
-                    {/* Node */}
-                    <div className={`flex items-center justify-center rounded-full transition-all ${
-                      isCurrent
-                        ? "h-7 w-7 bg-primary shadow-sm ring-[3px] ring-primary/20"
-                        : isCompleted
-                        ? "h-5 w-5 bg-emerald-500"
-                        : "h-5 w-5 bg-white border-2 border-stone-200"
-                    }`}>
-                      {isCompleted && (
-                        <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
-                          <path d="M2 6l3 3 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                      {isCurrent && (
-                        <span className="text-[9px] font-bold text-white leading-none">{i + 1}</span>
-                      )}
-                      {!isCompleted && !isCurrent && (
-                        <span className="text-[8px] font-medium text-stone-300 leading-none">{i + 1}</span>
+                const isLast      = vi === visibleStages.length - 1;
+
+                return (
+                  <div key={s} className="flex gap-4">
+                    {/* Node + vertical connector */}
+                    <div className="flex flex-col items-center shrink-0">
+                      <div className={`flex items-center justify-center rounded-full transition-all ${
+                        isCurrent
+                          ? "h-11 w-11 bg-primary shadow-lg ring-4 ring-primary/15"
+                          : isCompleted
+                          ? "h-9 w-9 bg-emerald-500"
+                          : "h-9 w-9 bg-white border-2 border-stone-200"
+                      }`}>
+                        {isCompleted && <Check className="h-4 w-4 text-white" strokeWidth={2.5} />}
+                        {isCurrent   && <span className="text-sm font-bold text-white">{i + 1}</span>}
+                        {!isCompleted && !isCurrent && (
+                          <span className="text-xs font-medium text-stone-300">{i + 1}</span>
+                        )}
+                      </div>
+                      {!isLast && (
+                        <div className={`w-0.5 flex-1 my-1.5 min-h-[20px] ${
+                          isCompleted ? "bg-emerald-300" : "bg-stone-100"
+                        }`} />
                       )}
                     </div>
-                    {/* Short label */}
-                    <span
-                      className={`text-[9px] leading-tight text-center ${
-                        isCurrent   ? "font-semibold text-primary" :
-                        isCompleted ? "text-emerald-500" :
-                                      "text-stone-300"
-                      }`}
-                      style={{ maxWidth: 36, wordBreak: "break-word" }}
-                    >
-                      {shortLabels[s] ?? s}
-                    </span>
-                  </div>,
-                ];
-                if (!isLast) {
-                  elements.push(
-                    <div key={`line-${s}`} className={`flex-1 h-0.5 mt-[13px] self-start ${
-                      i < currentIndex ? "bg-emerald-400" : "bg-stone-100"
-                    }`} />
-                  );
-                }
-                return elements;
+
+                    {/* Stage label + description */}
+                    <div className={`${isLast ? "pb-0" : "pb-5"} pt-1.5 flex-1 min-w-0`}>
+                      <p className={`leading-snug ${
+                        isCurrent
+                          ? "text-base font-semibold text-stone-900"
+                          : isCompleted
+                          ? "text-sm font-medium text-emerald-700"
+                          : "text-sm font-medium text-stone-400"
+                      }`}>
+                        {STAGE_LABELS[s]}
+                      </p>
+                      {isCurrent && (
+                        <p className="text-sm text-stone-500 mt-1.5 leading-relaxed">
+                          {STAGE_DESCRIPTIONS[s]}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
               })}
             </div>
 
-            {/* Current stage detail */}
-            <div className="mt-6 pt-5 border-t border-stone-100">
-              <div className="flex items-baseline justify-between mb-1">
-                <p className="text-lg font-semibold text-stone-900">
-                  {STAGE_LABELS[c.current_stage]}
-                </p>
-                <p className="text-[11px] text-stone-400 ml-3 shrink-0">
-                  Step {currentIndex + 1} of {STAGE_ORDER.length}
-                </p>
+            {/* Remaining stages count */}
+            {hiddenAfter > 0 && (
+              <div className="flex items-center gap-2 mt-4 ml-1">
+                <div className="h-px flex-1 bg-stone-100" />
+                <span className="text-xs text-stone-400 shrink-0">
+                  {hiddenAfter} more stage{hiddenAfter > 1 ? "s" : ""} ahead
+                </span>
+                <div className="h-px flex-1 bg-stone-100" />
               </div>
-              <p className="text-sm text-stone-500 leading-relaxed">
-                {STAGE_DESCRIPTIONS[c.current_stage]}
-              </p>
-            </div>
+            )}
+
+            {/* Step counter */}
+            <p className="text-[11px] text-stone-400 text-right mt-5 pt-4 border-t border-stone-100">
+              Step {currentIndex + 1} of {STAGE_ORDER.length}
+            </p>
           </Card>
         );
       }
